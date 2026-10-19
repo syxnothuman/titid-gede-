@@ -1,0 +1,663 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>JARVIS TikTok Live AI Assistant</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts: Orbitron & Rajdhani -->
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;600;800;900&family=Rajdhani:wght@400;600;700&display=swap" rel="stylesheet">
+
+    <style>
+        body {
+            background-color: #030814;
+            color: #00f0ff;
+            font-family: 'Rajdhani', sans-serif;
+            overflow-x: hidden;
+        }
+
+        .font-orbitron {
+            font-family: 'Orbitron', sans-serif;
+        }
+
+        /* HUD Glass & Glow Effect */
+        .hud-panel {
+            background: rgba(4, 20, 38, 0.85);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(0, 240, 255, 0.25);
+            box-shadow: 0 0 20px rgba(0, 240, 255, 0.1), inset 0 0 15px rgba(0, 240, 255, 0.05);
+            position: relative;
+        }
+
+        .hud-panel::before {
+            content: '';
+            position: absolute;
+            top: -2px; left: -2px; right: -2px; bottom: -2px;
+            background: linear-gradient(45deg, #00f0ff, transparent, #ff0055, transparent);
+            z-index: -1;
+            border-radius: inherit;
+            opacity: 0.3;
+        }
+
+        .hud-corner {
+            position: absolute;
+            width: 10px;
+            height: 10px;
+            border-color: #00f0ff;
+            border-style: solid;
+            pointer-events: none;
+        }
+        .hud-tl { top: -1px; left: -1px; border-width: 2px 0 0 2px; }
+        .hud-tr { top: -1px; right: -1px; border-width: 2px 2px 0 0; }
+        .hud-bl { bottom: -1px; left: -1px; border-width: 0 0 2px 2px; }
+        .hud-br { bottom: -1px; right: -1px; border-width: 0 2px 2px 0; }
+
+        /* Arc Reactor Animation States */
+        .arc-container {
+            position: relative;
+            width: 180px;
+            height: 180px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .arc-ring-outer {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            border: 2px dashed #00f0ff;
+            animation: spinClockwise 12s linear infinite;
+        }
+
+        .arc-ring-inner {
+            position: absolute;
+            width: 75%;
+            height: 75%;
+            border-radius: 50%;
+            border: 2px solid transparent;
+            border-top-color: #ff0055;
+            border-bottom-color: #00f0ff;
+            animation: spinCounter 6s linear infinite;
+        }
+
+        .arc-core {
+            width: 45%;
+            height: 45%;
+            border-radius: 50%;
+            background: radial-gradient(circle, #ffffff 0%, #00f0ff 60%, rgba(0,240,255,0.2) 100%);
+            box-shadow: 0 0 35px #00f0ff, 0 0 70px #00f0ff;
+            transition: all 0.4s ease;
+        }
+
+        .arc-core.speaking {
+            background: radial-gradient(circle, #ffffff 0%, #ff0055 60%, rgba(255,0,85,0.2) 100%);
+            box-shadow: 0 0 50px #ff0055, 0 0 90px #ff0055;
+            animation: pulseGlow 0.5s infinite alternate;
+        }
+
+        @keyframes spinClockwise {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+
+        @keyframes spinCounter {
+            from { transform: rotate(360deg); }
+            to { transform: rotate(0deg); }
+        }
+
+        @keyframes pulseGlow {
+            from { transform: scale(0.95); }
+            to { transform: scale(1.1); }
+        }
+
+        .bg-grid {
+            background-image: linear-gradient(to right, rgba(0, 240, 255, 0.03) 1px, transparent 1px),
+                              linear-gradient(to bottom, rgba(0, 240, 255, 0.03) 1px, transparent 1px);
+            background-size: 30px 30px;
+        }
+
+        .switch {
+            position: relative;
+            display: inline-block;
+            width: 44px;
+            height: 22px;
+        }
+        .switch input { opacity: 0; width: 0; height: 0; }
+        .slider {
+            position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0;
+            background-color: #0f172a; transition: .3s; border-radius: 22px;
+            border: 1px solid rgba(0, 240, 255, 0.4);
+        }
+        .slider:before {
+            position: absolute; content: ""; height: 14px; width: 14px; left: 3px; bottom: 3px;
+            background-color: #00f0ff; transition: .3s; border-radius: 50%;
+        }
+        input:checked + .slider { background-color: rgba(0, 240, 255, 0.3); border-color: #00f0ff; }
+        input:checked + .slider:before { transform: translateX(22px); background-color: #00f0ff; box-shadow: 0 0 8px #00f0ff; }
+
+        ::-webkit-scrollbar { width: 5px; }
+        ::-webkit-scrollbar-track { background: rgba(3, 12, 26, 0.8); }
+        ::-webkit-scrollbar-thumb { background: #00f0ff; border-radius: 3px; }
+    </style>
+</head>
+<body class="bg-grid min-h-screen flex flex-col justify-between p-3 md:p-5">
+
+    <!-- HEADER -->
+    <header class="hud-panel p-4 rounded-lg mb-4 flex flex-wrap items-center justify-between gap-4">
+        <div class="flex items-center space-x-3">
+            <div class="text-3xl text-cyan-400">
+                <i class="fa-solid fa-brain animate-pulse"></i>
+            </div>
+            <div>
+                <h1 class="font-orbitron text-lg md:text-2xl font-black tracking-widest text-white flex items-center gap-2">
+                    J.A.R.V.I.S. <span class="text-xs px-2 py-0.5 rounded bg-cyan-950 border border-cyan-400 text-cyan-400">TikTok AI Live v3.0</span>
+                </h1>
+                <p class="text-xs text-cyan-400/70 tracking-wider">INTELLIGENT AUTO-RESPONDER & VOICE ENGINE</p>
+            </div>
+        </div>
+
+        <div class="flex items-center gap-4 md:gap-6 text-sm flex-wrap">
+            <div class="flex items-center gap-2">
+                <span class="text-gray-400">SYSTEM:</span>
+                <span id="system-status" class="font-orbitron px-2 py-0.5 rounded bg-yellow-950/60 text-yellow-400 border border-yellow-500/40 text-xs">STANDBY</span>
+            </div>
+            <div class="flex items-center gap-2">
+                <span class="text-gray-400">USERS JOINED:</span>
+                <span id="user-count" class="font-orbitron text-cyan-300 font-bold text-base">0</span>
+            </div>
+        </div>
+    </header>
+
+    <!-- MAIN GRID -->
+    <main class="grid grid-cols-1 lg:grid-cols-12 gap-5 mb-4 flex-grow">
+        
+        <!-- LEFT PANEL -->
+        <section class="lg:col-span-4 flex flex-col gap-4">
+            <!-- TikTok Live Connection Panel -->
+            <div class="hud-panel p-4 rounded-lg">
+                <h2 class="font-orbitron text-sm font-bold text-white mb-3 flex items-center gap-2 border-b border-cyan-500/20 pb-2">
+                    <i class="fa-solid fa-wifi text-cyan-400"></i> KONEKSI TIKTOK LIVE
+                </h2>
+
+                <div class="mb-3">
+                    <label class="text-xs text-cyan-300 uppercase tracking-wider block mb-1.5">Mode Operasi</label>
+                    <div class="grid grid-cols-2 gap-2 p-1 bg-slate-900/80 rounded border border-cyan-500/30">
+                        <button id="mode-sim" onclick="setMode('sim')" class="py-1 text-xs font-semibold rounded bg-cyan-500 text-black transition-all">SIMULATOR</button>
+                        <button id="mode-live" onclick="setMode('live')" class="py-1 text-xs font-semibold rounded text-cyan-400 hover:text-white transition-all">LIVE BRIDGE WS</button>
+                    </div>
+                </div>
+
+                <div id="live-config" class="hidden space-y-2 mb-3">
+                    <div>
+                        <label class="text-xs text-gray-400 block mb-1">Username TikTok Live (@username)</label>
+                        <input type="text" id="tiktok-username" placeholder="@username" class="w-full bg-slate-900/90 border border-cyan-500/40 rounded p-1.5 text-xs text-cyan-200 focus:outline-none">
+                    </div>
+                    <div>
+                        <label class="text-xs text-gray-400 block mb-1">WebSocket Bridge URL (Koyeb)</label>
+                        <input type="text" id="ws-url" value="wss://husky-gertrudis-fxc4sanz-a0435f64.koyeb.app/" class="w-full bg-slate-900/90 border border-cyan-500/40 rounded p-1.5 text-xs text-cyan-200 focus:outline-none">
+                    </div>
+                </div>
+
+                <button id="btn-toggle-conn" onclick="toggleConnection()" class="w-full py-2 rounded font-orbitron font-bold text-xs tracking-wider bg-cyan-500 hover:bg-cyan-400 text-black transition-all shadow-[0_0_15px_rgba(0,240,255,0.4)]">
+                    HUBUNGKAN JARVIS
+                </button>
+            </div>
+
+            <!-- Voice Settings -->
+            <div class="hud-panel p-4 rounded-lg">
+                <h2 class="font-orbitron text-sm font-bold text-white mb-3 flex items-center gap-2 border-b border-cyan-500/20 pb-2">
+                    <i class="fa-solid fa-volume-high text-cyan-400"></i> SUARA & NADA JARVIS
+                </h2>
+                <div class="space-y-2">
+                    <div>
+                        <label class="text-xs text-cyan-300 block mb-1">Suara TTS Browser</label>
+                        <select id="voice-select" class="w-full bg-slate-900/90 border border-cyan-500/40 rounded p-1.5 text-xs text-cyan-200 focus:outline-none"></select>
+                    </div>
+                    <div class="grid grid-cols-2 gap-3">
+                        <div>
+                            <div class="flex justify-between text-xs mb-1">
+                                <span class="text-cyan-300">Pitch</span>
+                                <span id="val-pitch" class="text-cyan-400">0.9</span>
+                            </div>
+                            <input type="range" id="pitch-slider" min="0.5" max="1.5" step="0.1" value="0.9" oninput="document.getElementById('val-pitch').innerText=this.value" class="w-full accent-cyan-400">
+                        </div>
+                        <div>
+                            <div class="flex justify-between text-xs mb-1">
+                                <span class="text-cyan-300">Kecepatan</span>
+                                <span id="val-rate" class="text-cyan-400">1.1</span>
+                            </div>
+                            <input type="range" id="rate-slider" min="0.5" max="1.8" step="0.1" value="1.1" oninput="document.getElementById('val-rate').innerText=this.value" class="w-full accent-cyan-400">
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- CENTER PANEL -->
+        <section class="lg:col-span-5 flex flex-col gap-4">
+            <!-- Visualizer -->
+            <div class="hud-panel p-5 rounded-lg flex flex-col items-center justify-center min-h-[220px] relative overflow-hidden">
+                <div class="arc-container my-2">
+                    <div class="arc-ring-outer"></div>
+                    <div class="arc-ring-inner"></div>
+                    <div id="jarvis-core" class="arc-core"></div>
+                </div>
+                <div id="speaking-text" class="text-center min-h-[40px] flex items-center justify-center font-orbitron text-xs md:text-sm text-cyan-300 px-4 mt-1">
+                    "Sistem Jarvis siap menerima perintah..."
+                </div>
+            </div>
+
+            <!-- Chat Feed -->
+            <div class="hud-panel p-4 rounded-lg flex-1 flex flex-col min-h-[260px]">
+                <h2 class="font-orbitron text-sm font-bold text-white mb-2 flex items-center justify-between border-b border-cyan-500/20 pb-2">
+                    <span><i class="fa-solid fa-comments text-cyan-400 mr-2"></i>TIKTOK LIVE CHAT FEED</span>
+                    <button onclick="clearChatFeed()" class="text-[10px] text-gray-400 hover:text-cyan-300">CLEAR</button>
+                </h2>
+                <div id="chat-feed" class="flex-1 overflow-y-auto space-y-2.5 pr-1 max-h-[280px] text-xs">
+                    <div class="text-gray-500 italic">[SYSTEM] Chat feed terhubung. Menunggu komentar...</div>
+                </div>
+            </div>
+
+            <!-- Simulator -->
+            <div class="hud-panel p-4 rounded-lg">
+                <h2 class="font-orbitron text-xs font-bold text-white mb-2 flex items-center gap-2">
+                    <i class="fa-solid fa-gamepad text-cyan-400"></i> SIMULATOR EVENT TIKTOK
+                </h2>
+                <div class="space-y-2">
+                    <div class="flex gap-2">
+                        <input type="text" id="sim-user" placeholder="Nama User..." value="Rian_TikTok" class="w-1/3 bg-slate-900/90 border border-cyan-500/40 rounded p-1.5 text-xs text-cyan-200 focus:outline-none">
+                        <input type="text" id="sim-comment" placeholder="Tulis komentar..." class="flex-1 bg-slate-900/90 border border-cyan-500/40 rounded p-1.5 text-xs text-cyan-200 focus:outline-none">
+                        <button onclick="triggerSimulateComment()" class="px-3 bg-cyan-500 hover:bg-cyan-400 text-black font-bold font-orbitron text-xs rounded transition-all">
+                            KIRIM
+                        </button>
+                    </div>
+                    <div class="flex flex-wrap gap-1.5 pt-1">
+                        <span class="text-[10px] text-gray-400 self-center">Quick Test:</span>
+                        <button onclick="quickComment('Budi', 'Halo Jarvis, semangat ya live nya!')" class="text-[10px] bg-slate-800 hover:bg-slate-700 text-cyan-300 px-2 py-0.5 rounded border border-cyan-500/30">Kirim Komentar</button>
+                        <button onclick="quickJoinSim('Andi_Gamer')" class="text-[10px] bg-slate-800 hover:bg-slate-700 text-green-300 px-2 py-0.5 rounded border border-green-500/30">+ Join User</button>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- RIGHT PANEL -->
+        <section class="lg:col-span-3 flex flex-col gap-4">
+            <div class="hud-panel p-4 rounded-lg flex-1 flex flex-col min-h-[350px]">
+                <div class="flex items-center justify-between mb-2 border-b border-cyan-500/20 pb-2">
+                    <h2 class="font-orbitron text-sm font-bold text-white flex items-center gap-2">
+                        <i class="fa-solid fa-terminal text-cyan-400"></i> SYSTEM LOG
+                    </h2>
+                    <button onclick="clearSystemLogs()" class="text-[10px] text-gray-400 hover:text-cyan-300">CLEAR</button>
+                </div>
+                <div id="system-log" class="flex-1 overflow-y-auto space-y-1.5 pr-1 max-h-[380px] text-[11px] font-mono">
+                    <div class="text-gray-500 italic">[INIT] Inisialisasi Jarvis AI Engine...</div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- SCRIPT -->
+    <script>
+        let isConnected = false;
+        let mode = 'sim';
+        let userJoinCount = 0;
+        let wsSocket = null;
+        let synth = window.speechSynthesis;
+        let voices = [];
+        let audioUnlocked = false;
+
+        const jarvisCore = document.getElementById('jarvis-core');
+        const speakingText = document.getElementById('speaking-text');
+        const systemLog = document.getElementById('system-log');
+        const chatFeed = document.getElementById('chat-feed');
+        const userCountEl = document.getElementById('user-count');
+        const systemStatusEl = document.getElementById('system-status');
+        const btnToggleConn = document.getElementById('btn-toggle-conn');
+        const voiceSelect = document.getElementById('voice-select');
+
+        // Unlock audio browser pada klik pertama
+        function unlockAudio() {
+            if (audioUnlocked) return;
+            if (synth) {
+                const silent = new SpeechSynthesisUtterance('');
+                synth.speak(silent);
+                audioUnlocked = true;
+                addSystemLog("Audio browser di-unlock.", "system");
+            }
+        }
+        document.addEventListener('click', unlockAudio, { once: true });
+
+        // Load Voices
+        function loadVoices() {
+            if (!synth) return;
+            voices = synth.getVoices();
+            voiceSelect.innerHTML = '';
+            voices.forEach((v, index) => {
+                const option = document.createElement('option');
+                option.value = index;
+                option.textContent = `${v.name} (${v.lang})`;
+                if (v.lang.toLowerCase().includes('id') || v.lang.toLowerCase().includes('ind')) {
+                    option.selected = true;
+                }
+                voiceSelect.appendChild(option);
+            });
+            if (voiceSelect.options.length === 0) {
+                const option = document.createElement('option');
+                option.textContent = 'Default Browser Voice';
+                voiceSelect.appendChild(option);
+            }
+        }
+        if (synth.onvoiceschanged !== undefined) {
+            synth.onvoiceschanged = loadVoices;
+        }
+
+        window.onload = function() {
+            loadVoices();
+            addSystemLog("Sistem Jarvis siap.", "system");
+        };
+
+        // Mode Switching
+        function setMode(selectedMode) {
+            if (isConnected) {
+                addSystemLog("Putuskan koneksi dulu sebelum ubah mode.", "error");
+                return;
+            }
+            mode = selectedMode;
+            const btnSim = document.getElementById('mode-sim');
+            const btnLive = document.getElementById('mode-live');
+            const liveConfig = document.getElementById('live-config');
+
+            if (mode === 'sim') {
+                btnSim.className = "py-1 text-xs font-semibold rounded bg-cyan-500 text-black transition-all";
+                btnLive.className = "py-1 text-xs font-semibold rounded text-cyan-400 hover:text-white transition-all";
+                liveConfig.classList.add('hidden');
+                addSystemLog("Mode: SIMULATOR", "system");
+            } else {
+                btnLive.className = "py-1 text-xs font-semibold rounded bg-cyan-500 text-black transition-all";
+                btnSim.className = "py-1 text-xs font-semibold rounded text-cyan-400 hover:text-white transition-all";
+                liveConfig.classList.remove('hidden');
+                addSystemLog("Mode: LIVE BRIDGE WS", "system");
+            }
+        }
+
+        // Toggle Connection aman dari freeze tombol
+        function toggleConnection() {
+            if (isConnected) {
+                isConnected = false;
+                if (wsSocket) {
+                    wsSocket.close();
+                    wsSocket = null;
+                }
+                systemStatusEl.innerText = "STANDBY";
+                systemStatusEl.className = "font-orbitron px-2 py-0.5 rounded bg-yellow-950/60 text-yellow-400 border border-yellow-500/40 text-xs";
+                btnToggleConn.innerText = "HUBUNGKAN JARVIS";
+                btnToggleConn.className = "w-full py-2 rounded font-orbitron font-bold text-xs tracking-wider bg-cyan-500 hover:bg-cyan-400 text-black transition-all shadow-[0_0_15px_rgba(0,240,255,0.4)]";
+                addSystemLog("Koneksi dihentikan.", "system");
+            } else {
+                isConnected = true;
+                systemStatusEl.innerText = "ACTIVE";
+                systemStatusEl.className = "font-orbitron px-2 py-0.5 rounded bg-green-950/60 text-green-400 border border-green-500/40 text-xs";
+                btnToggleConn.innerText = "PUTUSKAN KONEKSI";
+                btnToggleConn.className = "w-full py-2 rounded font-orbitron font-bold text-xs tracking-wider bg-red-600 hover:bg-red-500 text-white transition-all shadow-[0_0_15px_rgba(255,0,85,0.4)]";
+
+                if (mode === 'sim') {
+                    addSystemLog("Simulator online.", "system");
+                    speakNow("Sistem Jarvis online. Siap merespon.", 300);
+                } else {
+                    connectWebSocket();
+                }
+            }
+        }
+
+        // WebSocket Connect aman
+        function connectWebSocket() {
+            const wsUrl = document.getElementById('ws-url').value.trim();
+            const username = document.getElementById('tiktok-username').value.trim().replace(/^@/, '');
+
+            if (!username) {
+                addSystemLog("Error: Username TikTok belum diisi!", "error");
+                toggleConnection();
+                return;
+            }
+
+            addSystemLog(`Menghubungkan ke: ${wsUrl}...`, "system");
+
+            try {
+                wsSocket = new WebSocket(wsUrl);
+
+                wsSocket.onopen = () => {
+                    addSystemLog("Terhubung ke Cloud Bridge!", "system");
+                    wsSocket.send(JSON.stringify({ type: 'CONNECT_TIKTOK', username: username }));
+                    speakNow(`Menghubungkan ke siaran TikTok Live @${username}.`, 300);
+                }; 
+
+                wsSocket.onmessage = (event) => {
+                    try {
+                        const data = JSON.parse(event.data);
+                        const uName = data.nickname || data.uniqueId || data.user || data.author || data.username || data.name || "Penonton";
+                        const uComment = data.comment || data.text || data.content || data.message || data.msg || "";
+                        const eventType = (data.type || data.event || data.action || "").toLowerCase();
+
+                        if (eventType.includes('member') || eventType.includes('join') || eventType.includes('follow')) {
+                            handleUserJoin(uName);
+                        } else if (uComment.length > 0 || eventType.includes('chat') || eventType.includes('comment')) {
+                            if (uComment.length > 0) {
+                                handleIncomingComment(uName, uComment);
+                            }
+                        }
+                    } catch (err) {
+                        console.error("Parse error:", err);
+                    }
+                };
+                
+                wsSocket.onerror = () => addSystemLog("Koneksi WebSocket error.", "error");
+                wsSocket.onclose = () => {
+                    if (isConnected) {
+                        addSystemLog("WebSocket terputus.", "error");
+                        toggleConnection();
+                    }
+                };
+            } catch (e) {
+                addSystemLog("Gagal inisialisasi WebSocket: " + e.message, "error");
+                toggleConnection();
+            }
+        }
+
+        // Variasi Sapaan Join
+        const greetingTemplates = [
+            "Hallo Musang {user} selamat datang dilive kita"
+        ];
+
+                // =============================================================
+        // ANTREAN TTS TUNGGAL (ANTI TABRAKAN & BISA MEMBACA BERURUTAN)
+        // =============================================================
+        let ttsQueue = [];
+        let isSpeaking = false;
+
+        // Fungsi Memasukkan Teks ke Antrean
+        function queueSpeech(text, delayMs = 500) {
+            if (!('speechSynthesis' in window)) return;
+            unlockAudio();
+
+            // Masukkan pesan ke dalam antrean
+            ttsQueue.push({ text: text, delay: delayMs });
+
+            // Jika Jarvis sedang tidak bicara, jalankan antrean
+            if (!isSpeaking) {
+                processNextSpeech();
+            }
+        }
+
+        // Pemroses Antrean Berurutan (FIFO)
+        function processNextSpeech() {
+            if (ttsQueue.length === 0) {
+                isSpeaking = false;
+                if (jarvisCore) jarvisCore.classList.remove('speaking');
+                if (speakingText) speakingText.innerText = '"Sistem Jarvis siap menerima perintah..."';
+                setAiStatus("IDLE", "text-cyan-400 border-cyan-500/40");
+                return;
+            }
+
+            isSpeaking = true;
+            const currentItem = ttsQueue.shift(); // Ambil pesan paling depan
+
+            setTimeout(() => {
+                const utterance = new SpeechSynthesisUtterance(currentItem.text);
+                const currentVoices = synth.getVoices();
+                const selectedVoiceIndex = voiceSelect ? voiceSelect.value : null;
+
+                if (currentVoices && currentVoices[selectedVoiceIndex]) {
+                    utterance.voice = currentVoices[selectedVoiceIndex];
+                }
+
+                utterance.lang = 'id-ID';
+                utterance.pitch = parseFloat(document.getElementById('pitch-slider')?.value || 0.9);
+                utterance.rate = parseFloat(document.getElementById('rate-slider')?.value || 1.1);
+
+                utterance.onstart = () => {
+                    if (jarvisCore) jarvisCore.classList.add('speaking');
+                    if (speakingText) speakingText.innerText = `"${currentItem.text}"`;
+                    setAiStatus("SPEAKING", "text-red-400 border-red-500/40");
+                    addSystemLog(`[TTS] Membaca: "${currentItem.text}"`, "system");
+                };
+
+                // KUNCI PENTING: Ketika selesai ngomong, lanjut ke antrean berikutnya dengan jeda alami
+                utterance.onend = () => {
+                    setTimeout(() => {
+                        processNextSpeech();
+                    }, 400); // Jeda 0.4 detik antar pembacaan pesan
+                };
+
+                utterance.onerror = (e) => {
+                    console.error("TTS Error:", e);
+                    // Jika ada error pada satu kalimat, tetap lanjut ke antrean berikutnya agar tidak nge-freeze
+                    setTimeout(() => {
+                        processNextSpeech();
+                    }, 200);
+                };
+
+                synth.speak(utterance);
+            }, currentItem.delay);
+        }
+
+        // =============================================================
+        // EVENT HANDLER DENGAN ANTREAN
+        // =============================================================
+
+        // 1. Sapaan Penonton Bergabung (Join)
+        function handleUserJoin(username) {
+            userJoinCount++;
+            if (userCountEl) userCountEl.innerText = userJoinCount;
+            addSystemLog(`User Join: ${username}`, "join");
+
+            const randomTemplate = greetingTemplates[Math.floor(Math.random() * greetingTemplates.length)];
+            const message = randomTemplate.replace('{user}', username);
+            
+            // Masukkan sapaan ke antrean dengan jeda awal 500ms
+            queueSpeech(message, 500);
+        }
+
+        // 2. Pembacaan Komentar Masuk
+        function handleIncomingComment(username, comment) {
+            if (!comment || comment.trim().length < 1) return;
+
+            addChatFeed(username, comment, false);
+            addSystemLog(`Komentar [${username}]: ${comment}`, "info");
+
+            const textToRead = `komentar dari musang ${username} : ${comment}`;
+            
+            // Masukkan pembacaan komentar ke antrean dengan jeda awal 300ms
+            queueSpeech(textToRead, 300);
+        }
+        
+
+        
+
+        // Fungsi Utama Suara (Stabil & Anti-Tabrakan)
+        function speakNow(text, delayMs = 300) {
+            if (!('speechSynthesis' in window)) return;
+            unlockAudio();
+
+            setTimeout(() => {
+                synth.cancel(); // Hentikan suara sebelumnya agar tidak tumpang tindih
+
+                const utterance = new SpeechSynthesisUtterance(text);
+                const currentVoices = synth.getVoices();
+                const selectedVoiceIndex = voiceSelect ? voiceSelect.value : null;
+
+                if (currentVoices && currentVoices[selectedVoiceIndex]) {
+                    utterance.voice = currentVoices[selectedVoiceIndex];
+                }
+
+                utterance.lang = 'id-ID';
+                utterance.pitch = parseFloat(document.getElementById('pitch-slider')?.value || 0.9);
+                utterance.rate = parseFloat(document.getElementById('rate-slider')?.value || 1.1);
+
+                utterance.onstart = () => {
+                    if (jarvisCore) jarvisCore.classList.add('speaking');
+                    if (speakingText) speakingText.innerText = `"${text}"`;
+                };
+
+                utterance.onend = () => {
+                    if (jarvisCore) jarvisCore.classList.remove('speaking');
+                    if (speakingText) speakingText.innerText = '"Sistem Jarvis siap menerima perintah..."';
+                };
+
+                utterance.onerror = () => {
+                    if (jarvisCore) jarvisCore.classList.remove('speaking');
+                };
+
+                synth.speak(utterance);
+            }, delayMs);
+        }
+
+        // Simulator
+        function triggerSimulateComment() {
+            const user = document.getElementById('sim-user').value.trim() || "Rian";
+            const comment = document.getElementById('sim-comment').value.trim();
+            if (comment) {
+                handleIncomingComment(user, comment);
+                document.getElementById('sim-comment').value = '';
+            }
+        }
+
+        function quickComment(user, text) {
+            handleIncomingComment(user, text);
+        }
+
+        function quickJoinSim(user) {
+            handleUserJoin(user);
+        }
+
+        function addChatFeed(sender, text) {
+            const div = document.createElement('div');
+            div.className = "p-2 my-1 rounded bg-slate-800/60 text-white text-sm";
+            div.innerHTML = `<span class="font-bold text-cyan-400">${sender}:</span> ${text}`;
+            chatFeed.appendChild(div);
+            chatFeed.scrollTop = chatFeed.scrollHeight;
+        }
+
+        function addSystemLog(msg, type = "info") {
+            const time = new Date().toLocaleTimeString();
+            const div = document.createElement('div');
+            let color = "text-cyan-300";
+            if (type === "error") color = "text-red-400 font-bold";
+            if (type === "join") color = "text-green-400";
+            if (type === "system") color = "text-yellow-300";
+
+            div.className = `${color} py-0.5 flex gap-1.5`;
+            div.innerHTML = `<span class="text-gray-500">[${time}]</span> <span>${msg}</span>`;
+            systemLog.appendChild(div);
+            systemLog.scrollTop = systemLog.scrollHeight;
+        }
+
+        function clearChatFeed() { chatFeed.innerHTML = ''; }
+        function clearSystemLogs() { systemLog.innerHTML = ''; }
+    </script>
+</body>
+</html>
