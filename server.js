@@ -1,6 +1,5 @@
 const http = require('http');
-// Menggunakan cara impor standar modul utama tiktok-live-connector
-const { WebcastPushConnection } = require('tiktok-live-connector');
+const TikTokLive = require('tiktok-live-connector');
 const { WebSocketServer } = require('ws');
 
 const PORT = process.env.PORT || 8000;
@@ -29,9 +28,8 @@ wss.on('connection', (ws) => {
                     tiktokConnection = null;
                 }
 
-                // Fallback aman untuk memanggil constructor pustaka
-                const Connector = WebcastPushConnection || require('tiktok-live-connector');
-                tiktokConnection = new Connector(username, {
+                // Inisialisasi langsung dari fungsi utama TikTokLive
+                tiktokConnection = new TikTokLive.WebcastPushConnection(username, {
                     processInitialData: false,
                     enableExtendedOption: true
                 });
@@ -93,4 +91,4 @@ wss.on('connection', (ws) => {
 server.listen(PORT, '0.0.0.0', () => {
     console.log(`🚀 Jarvis Cloud Bridge aktif di port ${PORT}`);
 });
-                
+                    
