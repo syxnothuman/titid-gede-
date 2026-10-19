@@ -1,13 +1,25 @@
+
 const http = require('http');
+const path = require('path');
+const express = require('express');
 const TikTokLive = require('tiktok-live-connector');
 const { WebSocketServer } = require('ws');
 
 const PORT = process.env.PORT || 8000;
 
-const server = http.createServer((req, res) => {
-    res.writeHead(200, { 'Content-Type': 'text/plain' });
-    res.end('Jarvis TikTok Cloud Bridge on Koyeb is Running!');
+// Inisialisasi Express App untuk menyajikan index.html
+const app = express();
+
+// Sajikan file statis (index.html dan file pendukung lainnya)
+app.use(express.static(path.join(__dirname)));
+
+// Route utama untuk melayani index.html
+app.get('/', (req, res) => {
+    res.sendFile(path.join(__dirname, 'index.html'));
 });
+
+// Buat HTTP Server gabungan Express & WebSocket
+const server = http.createServer(app);
 
 const wss = new WebSocketServer({ server });
 let tiktokConnection = null;
@@ -28,7 +40,7 @@ wss.on('connection', (ws) => {
                     tiktokConnection = null;
                 }
 
-                // Ambil constructor dengan aman tanpa peduli nama propertinya
+                // Ambil constructor dengan aman
                 const Connector = TikTokLive.WebcastPushConnection || TikTokLive.TikTokLiveConnection || TikTokLive.default || TikTokLive;
                 
                 tiktokConnection = new Connector(username, {
@@ -94,6 +106,5 @@ wss.on('connection', (ws) => {
 });
 
 server.listen(PORT, '0.0.0.0', () => {
-    console.log(`🚀 Jarvis Cloud Bridge aktif di port ${PORT}`);
+    console.log(`🚀 Jarvis Cloud Bridge & Web App aktif di port ${PORT}`);
 });
-                
