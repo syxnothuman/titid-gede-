@@ -1,4 +1,5 @@
 const http = require('http');
+// Menggunakan cara impor standar modul utama tiktok-live-connector
 const { WebcastPushConnection } = require('tiktok-live-connector');
 const { WebSocketServer } = require('ws');
 
@@ -17,9 +18,7 @@ wss.on('connection', (ws) => {
 
     ws.on('message', async (message) => {
         try {
-            // Pastikan pesan yang diterima adalah string teks biasa sebelum di-JSON-kan
-            const rawMessage = message.toString();
-            const data = JSON.parse(rawMessage);
+            const data = JSON.parse(message.toString());
 
             if (data.type === 'CONNECT_TIKTOK') {
                 const username = data.username.trim().replace(/^@/, '');
@@ -30,8 +29,9 @@ wss.on('connection', (ws) => {
                     tiktokConnection = null;
                 }
 
-                // Inisialisasi langsung menggunakan WebcastPushConnection
-                tiktokConnection = new WebcastPushConnection(username, {
+                // Fallback aman untuk memanggil constructor pustaka
+                const Connector = WebcastPushConnection || require('tiktok-live-connector');
+                tiktokConnection = new Connector(username, {
                     processInitialData: false,
                     enableExtendedOption: true
                 });
