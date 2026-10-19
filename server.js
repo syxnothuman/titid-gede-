@@ -1,5 +1,5 @@
 const http = require('http');
-const WebcastPushConnection = require('tiktok-live-connector');
+const TikTokModule = require('tiktok-live-connector');
 const { WebSocketServer } = require('ws');
 
 const PORT = process.env.PORT || 8000;
@@ -28,11 +28,21 @@ wss.on('connection', (ws) => {
                     tiktokConnection = null;
                 }
 
-                // Inisialisasi langsung modul sebagai constructor utama
-                tiktokConnection = new WebcastPushConnection(username, {
-                    processInitialData: false,
-                    enableExtendedOption: true
-                });
+                // Deteksi otomatis berbagai macam format ekspor modul
+                const Connector = TikTokModule.WebcastPushConnection || TikTokModule.default || TikTokModule;
+
+                try {
+                    tiktokConnection = new Connector(username, {
+                        processInitialData: false,
+                        enableExtendedOption: true
+                    });
+                } catch (e) {
+                    // Fallback jika terpanggil sebagai fungsi biasa tanpa new
+                    tiktokConnection = Connector(username, {
+                        processInitialData: false,
+                        enableExtendedOption: true
+                    });
+                }
 
                 try {
                     const state = await tiktokConnection.connect();
@@ -91,3 +101,4 @@ wss.on('connection', (ws) => {
 server.listen(PORT, '0.0.0.0', () => {
     console.log(`🚀 Jarvis Cloud Bridge aktif di port ${PORT}`);
 });
+                        
