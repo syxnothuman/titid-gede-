@@ -1,17 +1,16 @@
 const http = require('http');
-const { WebcastPushConnection } = require('tiktok-live-connector');
+// Perbaikan cara impor modul agar sesuai dengan constructor yang benar
+const TikTokLiveConnector = require('tiktok-live-connector');
+const { WebcastPushConnection } = TikTokLiveConnector;
 const { WebSocketServer } = require('ws');
 
-// Koyeb menyediakan port dinamis via process.env.PORT
 const PORT = process.env.PORT || 8000;
 
-// HTTP Server dasar agar Koyeb mendeteksi aplikasi aktif
 const server = http.createServer((req, res) => {
     res.writeHead(200, { 'Content-Type': 'text/plain' });
     res.end('Jarvis TikTok Cloud Bridge on Koyeb is Running!');
 });
 
-// WebSocket Server untuk menghubungkan ke HP / Web Jarvis Anda
 const wss = new WebSocketServer({ server });
 let tiktokConnection = null;
 
@@ -31,7 +30,9 @@ wss.on('connection', (ws) => {
                     tiktokConnection = null;
                 }
 
-                tiktokConnection = new WebcastPushConnection(username, {
+                // Memastikan constructor terpanggil dengan benar
+                const ConnectionClass = WebcastPushConnection || TikTokLiveConnector.WebcastPushConnection || TikTokLiveConnector;
+                tiktokConnection = new ConnectionClass(username, {
                     processInitialData: false,
                     enableExtendedOption: true
                 });
@@ -57,7 +58,6 @@ wss.on('connection', (ws) => {
                     return;
                 }
 
-                // Event Chat Masuk
                 tiktokConnection.on('chat', (msg) => {
                     console.log(`💬 [Koyeb Chat] ${msg.nickname}: ${msg.comment}`);
                     if (ws.readyState === ws.OPEN) {
@@ -70,7 +70,6 @@ wss.on('connection', (ws) => {
                     }
                 });
 
-                // Event Member Join
                 tiktokConnection.on('member', (msg) => {
                     console.log(`👤 [Koyeb Join] ${msg.nickname} bergabung.`);
                     if (ws.readyState === ws.OPEN) {
