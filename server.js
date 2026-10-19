@@ -1,5 +1,5 @@
 const http = require('http');
-const { WebcastPushConnection } = require('tiktok-live-connector');
+const TikTokLive = require('tiktok-live-connector');
 const { WebSocketServer } = require('ws');
 
 const PORT = process.env.PORT || 8000;
@@ -28,7 +28,10 @@ wss.on('connection', (ws) => {
                     tiktokConnection = null;
                 }
 
-                tiktokConnection = new WebcastPushConnection(username, {
+                // Ambil constructor dengan aman tanpa peduli nama propertinya
+                const Connector = TikTokLive.WebcastPushConnection || TikTokLive.TikTokLiveConnection || TikTokLive.default || TikTokLive;
+                
+                tiktokConnection = new Connector(username, {
                     processInitialData: false,
                     enableExtendedOption: true
                 });
@@ -54,7 +57,6 @@ wss.on('connection', (ws) => {
                     return;
                 }
 
-                // Menangkap data chat dengan fallback properti yang aman
                 tiktokConnection.on('chat', (msg) => {
                     const nickname = msg.nickname || msg.user?.nickname || msg.uniqueId || 'Penonton';
                     const comment = msg.comment || msg.content || '';
@@ -69,7 +71,6 @@ wss.on('connection', (ws) => {
                     }
                 });
 
-                // Menangkap data member join dengan fallback aman
                 tiktokConnection.on('member', (msg) => {
                     const nickname = msg.nickname || msg.user?.nickname || msg.uniqueId || 'Seseorang';
                     
@@ -95,3 +96,4 @@ wss.on('connection', (ws) => {
 server.listen(PORT, '0.0.0.0', () => {
     console.log(`🚀 Jarvis Cloud Bridge aktif di port ${PORT}`);
 });
+                
