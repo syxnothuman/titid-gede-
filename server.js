@@ -1,5 +1,5 @@
 const http = require('http');
-const { TikTokLiveConnection } = require('tiktok-live-connector');
+const { WebcastPushConnection } = require('tiktok-live-connector');
 const { WebSocketServer } = require('ws');
 
 const PORT = process.env.PORT || 8000;
@@ -28,9 +28,9 @@ wss.on('connection', (ws) => {
                     tiktokConnection = null;
                 }
 
-                // Menggunakan class constructor yang benar: TikTokLiveConnection
-                tiktokConnection = new TikTokLiveConnection(username, {
-                    processInitialData: false
+                tiktokConnection = new WebcastPushConnection(username, {
+                    processInitialData: false,
+                    enableExtendedOption: true
                 });
 
                 try {
@@ -54,25 +54,30 @@ wss.on('connection', (ws) => {
                     return;
                 }
 
+                // Menangkap data chat dengan fallback properti yang aman
                 tiktokConnection.on('chat', (msg) => {
-                    console.log(`💬 [Koyeb Chat] ${msg.nickname}: ${msg.comment}`);
+                    const nickname = msg.nickname || msg.user?.nickname || msg.uniqueId || 'Penonton';
+                    const comment = msg.comment || msg.content || '';
+                    
+                    console.log(`💬 [Koyeb Chat] ${nickname}: ${comment}`);
                     if (ws.readyState === ws.OPEN) {
                         ws.send(JSON.stringify({
                             type: 'chat',
-                            nickname: msg.nickname || msg.uniqueId,
-                            uniqueId: msg.uniqueId,
-                            comment: msg.comment
+                            nickname: nickname,
+                            comment: comment
                         }));
                     }
                 });
 
+                // Menangkap data member join dengan fallback aman
                 tiktokConnection.on('member', (msg) => {
-                    console.log(`👤 [Koyeb Join] ${msg.nickname} bergabung.`);
+                    const nickname = msg.nickname || msg.user?.nickname || msg.uniqueId || 'Seseorang';
+                    
+                    console.log(`👤 [Koyeb Join] ${nickname} bergabung.`);
                     if (ws.readyState === ws.OPEN) {
                         ws.send(JSON.stringify({
                             type: 'member',
-                            nickname: msg.nickname || msg.uniqueId,
-                            uniqueId: msg.uniqueId
+                            nickname: nickname
                         }));
                     }
                 });
@@ -90,4 +95,3 @@ wss.on('connection', (ws) => {
 server.listen(PORT, '0.0.0.0', () => {
     console.log(`🚀 Jarvis Cloud Bridge aktif di port ${PORT}`);
 });
-                            
