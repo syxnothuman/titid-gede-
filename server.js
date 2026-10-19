@@ -1,7 +1,5 @@
 const http = require('http');
-// Perbaikan cara impor modul agar sesuai dengan constructor yang benar
-const TikTokLiveConnector = require('tiktok-live-connector');
-const { WebcastPushConnection } = TikTokLiveConnector;
+const { WebcastPushConnection } = require('tiktok-live-connector');
 const { WebSocketServer } = require('ws');
 
 const PORT = process.env.PORT || 8000;
@@ -19,7 +17,9 @@ wss.on('connection', (ws) => {
 
     ws.on('message', async (message) => {
         try {
-            const data = JSON.parse(message);
+            // Pastikan pesan yang diterima adalah string teks biasa sebelum di-JSON-kan
+            const rawMessage = message.toString();
+            const data = JSON.parse(rawMessage);
 
             if (data.type === 'CONNECT_TIKTOK') {
                 const username = data.username.trim().replace(/^@/, '');
@@ -30,9 +30,8 @@ wss.on('connection', (ws) => {
                     tiktokConnection = null;
                 }
 
-                // Memastikan constructor terpanggil dengan benar
-                const ConnectionClass = WebcastPushConnection || TikTokLiveConnector.WebcastPushConnection || TikTokLiveConnector;
-                tiktokConnection = new ConnectionClass(username, {
+                // Inisialisasi langsung menggunakan WebcastPushConnection
+                tiktokConnection = new WebcastPushConnection(username, {
                     processInitialData: false,
                     enableExtendedOption: true
                 });
@@ -82,7 +81,7 @@ wss.on('connection', (ws) => {
                 });
             }
         } catch (err) {
-            console.error('❌ Error parsing message:', err);
+            console.error('❌ Error parsing message:', err.message);
         }
     });
 
@@ -94,3 +93,4 @@ wss.on('connection', (ws) => {
 server.listen(PORT, '0.0.0.0', () => {
     console.log(`🚀 Jarvis Cloud Bridge aktif di port ${PORT}`);
 });
+                
